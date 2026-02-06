@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Steam Pro Analyzer (Persistent & Robust)</title>
+    <title>Steam Batch Analyzer (Smart Engine)</title>
     <style>
         :root {
             --bg: #101216;
@@ -11,7 +11,7 @@
             --border: #2a475e;
             --accent: #66c0f4;
             --text: #c7d5e0;
-            --success: #a1cd44; 
+            --success: #66c0f4; 
             --xbox: #107C10;
             --ps: #00439C;
             --switch: #e60012;
@@ -30,14 +30,11 @@
             box-sizing: border-box;
         }
 
-        /* Header & Controls */
-        .header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-        h1 { margin: 0; font-size: 20px; color: #fff; text-transform: uppercase; letter-spacing: 1px; }
-        .storage-status { font-size: 12px; color: #888; font-style: italic; }
+        h1 { margin: 0 0 15px 0; font-size: 20px; color: #fff; text-transform: uppercase; letter-spacing: 1px; }
 
         .controls {
             display: grid;
-            grid-template-columns: 1fr 220px;
+            grid-template-columns: 1fr 200px;
             gap: 15px;
             margin-bottom: 20px;
             background: var(--surface);
@@ -59,7 +56,11 @@
             box-sizing: border-box;
         }
 
-        .actions { display: flex; flex-direction: column; gap: 8px; }
+        .actions {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
 
         button {
             flex: 1;
@@ -67,41 +68,22 @@
             border-radius: 4px;
             font-weight: bold;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: opacity 0.2s;
             color: #fff;
-            font-size: 12px;
-            padding: 8px;
         }
-        button:hover { opacity: 0.9; transform: translateY(-1px); }
-        button:active { transform: translateY(0); }
-        button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        button:hover { opacity: 0.9; }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
 
-        #btnProcess { background: linear-gradient(90deg, #06BFFF, #2D73FF); font-size: 14px; }
-        #btnExport { background: #4c6b22; }
+        #btnProcess { background: linear-gradient(90deg, #06BFFF, #2D73FF); }
+        #btnExport { background: #4c6b22; display: none; }
         #btnClear { background: #3a3a3a; }
-        #btnResetStorage { background: #cd5444; }
 
-        /* Filter Bar */
-        .filter-container { margin-bottom: 10px; }
-        .filter-input {
-            width: 100%;
-            padding: 10px;
-            background: #171a21;
-            border: 1px solid var(--border);
-            color: #fff;
-            border-radius: 4px;
-            box-sizing: border-box;
-        }
-
-        /* Progress Bar */
         .progress-container {
             width: 100%;
             height: 4px;
             background: #000;
             margin-bottom: 15px;
             display: none;
-            border-radius: 2px;
-            overflow: hidden;
         }
         .progress-bar {
             height: 100%;
@@ -110,7 +92,6 @@
             transition: width 0.3s;
         }
 
-        /* Table */
         .table-container {
             flex: 1;
             overflow: auto;
@@ -119,87 +100,89 @@
             background: #171a21;
         }
 
-        table { width: 100%; border-collapse: collapse; font-size: 13px; white-space: nowrap; }
-        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            white-space: nowrap;
+        }
+
         th {
             background: #20242b;
             position: sticky;
             top: 0;
-            padding: 12px 10px;
+            padding: 10px;
             text-align: left;
             font-weight: 600;
             color: var(--accent);
             z-index: 10;
             border-bottom: 2px solid var(--border);
-            cursor: pointer;
-            user-select: none;
         }
-        th:hover { background: #2a3540; color: #fff; }
-        th::after { content: ' ⇅'; font-size: 10px; opacity: 0.5; margin-left: 5px; }
 
-        td { padding: 8px 10px; border-bottom: 1px solid #2a3540; vertical-align: middle; }
+        td {
+            padding: 8px 10px;
+            border-bottom: 1px solid #2a3540;
+            vertical-align: middle;
+        }
+
         tr:hover { background: rgba(255,255,255,0.05); }
 
-        /* Cell Visuals */
-        .thumb { width: 36px; height: 36px; object-fit: cover; border-radius: 3px; background: #333; }
+        .thumb { width: 30px; height: 30px; object-fit: cover; border-radius: 3px; }
         .score { font-weight: bold; color: #a1cd44; }
         .price-br { color: #fff; font-weight: 500; }
         .price-us { color: #888; font-size: 11px; }
-        .date-rel { font-size: 11px; color: #aaa; display: block; }
         
-        /* Badges */
         .plat-icon { 
-            display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 4px; 
-            background: #333; border: 1px solid #444;
+            display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; 
+            background: #444;
         }
-        .plat-icon.active.pc { background: var(--accent); box-shadow: 0 0 6px var(--accent); border-color: transparent;}
-        .plat-icon.active.ps { background: var(--ps); box-shadow: 0 0 6px var(--ps); border-color: transparent;}
-        .plat-icon.active.xb { background: var(--xbox); box-shadow: 0 0 6px var(--xbox); border-color: transparent;}
-        .plat-icon.active.sw { background: var(--switch); box-shadow: 0 0 6px var(--switch); border-color: transparent;}
+        .plat-icon.active.pc { background: var(--accent); box-shadow: 0 0 5px var(--accent); }
+        .plat-icon.active.ps { background: var(--ps); box-shadow: 0 0 5px var(--ps); }
+        .plat-icon.active.xb { background: var(--xbox); box-shadow: 0 0 5px var(--xbox); }
+        .plat-icon.active.sw { background: var(--switch); box-shadow: 0 0 5px var(--switch); }
 
         .trend-up { color: #a1cd44; }
         .trend-down { color: #cd5444; }
-        .status-loading { color: var(--accent); font-style: italic; animation: pulse 1.5s infinite; }
+        .status-loading { color: var(--accent); font-style: italic; }
         .status-error { color: #cd5444; }
 
-        .tag-pill { background: #2a475e; padding: 2px 6px; border-radius: 3px; font-size: 10px; margin-right: 2px; }
-        
-        /* Links */
-        .db-link, .hltb-link {
-            text-decoration: none; padding: 2px 6px; border-radius: 3px; font-size: 11px; transition: 0.2s;
+        .db-link {
+            background-color: #2b1c3d;
+            color: #d8b4fe;
+            padding: 3px 8px;
+            border-radius: 4px;
+            text-decoration: none;
+            font-size: 11px;
+            border: 1px solid #5a3c7d;
+            transition: all 0.2s;
         }
-        .db-link { background: #2b1c3d; color: #d8b4fe; border: 1px solid #5a3c7d; }
-        .db-link:hover { background: var(--db-color); color: #fff; border-color: #fff; }
-        
-        .hltb-link { background: #1c2b3d; color: #8fb3e0; border: 1px solid #2a475e; }
-        .hltb-link:hover { background: #2D73FF; color: #fff; }
+        .db-link:hover { background-color: var(--db-color); color: white; border-color: white;}
 
-        @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
+        /* Estilo para o link do nome */
+        .game-link {
+            color: #66c0f4;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .game-link:hover {
+            text-decoration: underline;
+        }
+
     </style>
 </head>
 <body>
 
-    <div class="header-row">
-        <h1>Steam Pro Analyzer <span style="font-size:12px; opacity:0.6; vertical-align:middle; border:1px solid #444; padding:2px 5px; border-radius:4px;">v2.0 Beta</span></h1>
-        <span class="storage-status" id="storageMsg">Cache Local Ativo</span>
-    </div>
+    <h1>Analisador Batch (Filtro Engine)</h1>
 
     <div class="controls">
         <div>
-            <textarea id="inputList" placeholder="Cole sua lista de jogos (Links, IDs ou Nomes).&#10;Ex: Baldurs Gate 3, 1086940&#10;Separados por Enter ou vírgula."></textarea>
+            <textarea id="inputList" placeholder="Cole aqui sua lista de jogos.&#10;Aceita links Steam, IDs ou Nomes.&#10;Separados por Enter, vírgula ou ponto e vírgula."></textarea>
         </div>
         <div class="actions">
-            <button id="btnProcess" onclick="startBatch()">🚀 PROCESSAR LISTA</button>
-            <button id="btnExport" onclick="exportToCSV()" style="display:none">📥 BAIXAR CSV</button>
-            <div style="display:flex; gap:5px;">
-                <button id="btnClear" onclick="clearTable()">Limpar Tabela</button>
-                <button id="btnResetStorage" onclick="resetStorage()">Resetar Memória</button>
-            </div>
+            <button id="btnProcess" onclick="startBatch()">PROCESSAR LISTA</button>
+            <button id="btnExport" onclick="exportToCSV()">BAIXAR CSV (EXCEL)</button>
+            <button id="btnClear" onclick="clearTable()">LIMPAR</button>
         </div>
-    </div>
-
-    <div class="filter-container">
-        <input type="text" id="tableFilter" class="filter-input" placeholder="🔍 Filtrar resultados (ex: 'Unreal', 'RPG', 'Gratis')..." onkeyup="filterTable()">
     </div>
 
     <div class="progress-container" id="progressBox">
@@ -210,19 +193,19 @@
         <table id="dataTable">
             <thead>
                 <tr>
-                    <th onclick="sortTable(0)">Img</th>
-                    <th onclick="sortTable(1)">Nome</th>
-                    <th onclick="sortTable(2)">Status</th>
-                    <th onclick="sortTable(3)">R$</th>
-                    <th onclick="sortTable(4)">USD</th>
-                    <th onclick="sortTable(5)">Score</th>
-                    <th onclick="sortTable(6)">Lançamento</th>
-                    <th onclick="sortTable(7)">Tags</th>
-                    <th onclick="sortTable(8)">Engine</th>
-                    <th onclick="sortTable(9)">Plataformas</th>
-                    <th onclick="sortTable(10)">Players</th>
-                    <th onclick="sortTable(11)">Tendência</th>
-                    <th onclick="sortTable(12)">HLTB (Est.)</th>
+                    <th style="width: 40px;">Img</th>
+                    <th>Nome do Jogo</th>
+                    <th>Status</th>
+                    <th>Preço (BRL)</th>
+                    <th>Preço (USD)</th>
+                    <th>Score</th>
+                    <th>Lançamento</th>
+                    <th>Plataformas (Wiki/Lojas)</th>
+                    <th>Engine</th>
+                    <th>Jogadores (Agora)</th>
+                    <th>Tendência (6m)</th>
+                    <th>Desenvolvedor</th>
+                    <th>ID</th>
                 </tr>
             </thead>
             <tbody></tbody>
@@ -230,86 +213,17 @@
     </div>
 
 <script>
-    // --- CONFIGURAÇÃO ---
-    // Rotação de proxies para evitar falhas
-    const PROXIES = [
-        "https://corsproxy.io/?", 
-        "https://api.allorigins.win/raw?url="
-    ];
-    let currentProxyIndex = 0;
-
-    const ACCEPTED_ENGINES = ['unity', 'unreal', 'gamemaker', 'game maker', 'godot'];
+    const CORS_PROXY = "https://corsproxy.io/?";
     let processedData = []; 
 
-    // --- CICLO DE VIDA (PERSISTÊNCIA) ---
-    window.onload = function() {
-        loadState();
-    };
+    const ACCEPTED_ENGINES = ['unity', 'unreal', 'gamemaker', 'game maker', 'godot'];
 
-    function saveState() {
-        localStorage.setItem('steam_input', document.getElementById('inputList').value);
-        localStorage.setItem('steam_data', JSON.stringify(processedData));
-        
-        const msg = document.getElementById('storageMsg');
-        msg.innerText = "Salvo às " + new Date().toLocaleTimeString();
-        setTimeout(() => msg.innerText = "Cache Local Ativo", 2000);
-    }
-
-    function loadState() {
-        const savedInput = localStorage.getItem('steam_input');
-        const savedData = localStorage.getItem('steam_data');
-
-        if(savedInput) document.getElementById('inputList').value = savedInput;
-        
-        if(savedData) {
-            processedData = JSON.parse(savedData);
-            if(processedData.length > 0) {
-                // Reconstrói a tabela a partir da memória
-                rebuildTableFromMemory();
-                document.getElementById('btnExport').style.display = 'block';
-            }
-        }
-    }
-
-    function resetStorage() {
-        if(confirm("Isso apagará todos os dados salvos e a lista. Continuar?")) {
-            localStorage.clear();
-            location.reload();
-        }
-    }
-
-    // --- REDE ROBUSTA ---
-    // Tenta fetch com proxy 1, se falhar, tenta proxy 2, espera um pouco...
-    async function robustFetch(targetUrl) {
-        for (let i = 0; i < PROXIES.length; i++) {
-            const proxy = PROXIES[(currentProxyIndex + i) % PROXIES.length];
-            try {
-                const response = await fetch(proxy + encodeURIComponent(targetUrl));
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                return await response; // Retorna Response object
-            } catch (e) {
-                console.warn(`Proxy ${proxy} falhou, tentando próximo...`);
-            }
-        }
-        throw new Error("Todos os proxies falharam. Tente mais tarde.");
-    }
-
-    // Função de "Sleep" para Rate Limiting
-    const sleep = (ms) => new Promise(r => setTimeout(r, ms));
-
-    // --- PROCESSAMENTO EM LOTE ---
     async function startBatch() {
         const input = document.getElementById('inputList').value;
         if(!input.trim()) return alert("A lista está vazia.");
 
-        // Salva input inicial
-        localStorage.setItem('steam_input', input);
-
-        // UI Reset
-        processedData = []; // Limpa dados antigos
-        document.querySelector('#dataTable tbody').innerHTML = '';
+        clearTable();
         document.getElementById('btnExport').style.display = 'none';
-        
         const progressBox = document.getElementById('progressBox');
         const progressBar = document.getElementById('progressBar');
         progressBox.style.display = 'block';
@@ -317,192 +231,135 @@
 
         let items = input.split(/[\n,;]+/).map(s => s.trim()).filter(s => s.length > 0);
         let total = items.length;
+        let completed = 0;
 
-        // Cria Placeholders
-        items.forEach((item, index) => createRowPlaceholder(index, item));
+        items.forEach((item, index) => {
+            createRow(index, item);
+        });
 
-        // Loop de Processamento
         for (let i = 0; i < total; i++) {
-            // Rate Limit: Espera 800ms entre requisições para a Steam não bloquear
-            if(i > 0) await sleep(800);
-
             try {
-                updateCell(i, 2, 'Buscando ID...', 'status-loading'); // Status Column
+                updateCell(i, 'status', 'Buscando ID...', 'status-loading');
                 
                 let appId = await resolveID(items[i]);
-                updateCell(i, 2, 'Baixando...', 'status-loading');
+                
+                // Inicializa o dado na memória com o ID para que o link possa ser gerado
+                processedData[i] = { id: appId }; 
+                
+                updateCell(i, 'id', appId);
+                updateCell(i, 'status', 'Baixando Dados...', 'status-loading');
 
-                // Dados Base
                 let steamData = await fetchSteamBase(appId);
                 fillRowBasic(i, steamData);
                 
-                // Dados Externos (Paralelo)
-                // HLTB e Wiki/Lojas rodam juntos
                 await Promise.all([
                     verifyExternalData(i, steamData.name, appId),
-                    fetchTrends(i, appId),
-                    fetchHLTB(i, steamData.name)
+                    fetchTrends(i, appId)
                 ]);
 
-                updateCell(i, 2, 'OK', 'trend-up');
-                
-                // Captura dados finais para memória
-                captureRowData(i, steamData, appId);
-                saveState(); // Salva a cada sucesso
+                updateCell(i, 'status', 'Concluído', 'trend-up');
+                saveToMemory(i, steamData, appId);
 
             } catch (err) {
                 console.error(err);
-                updateCell(i, 2, 'Erro', 'status-error');
-                // Salva o erro na memória também para não perder a posição
-                processedData[i] = { error: true, name: items[i], msg: err.message };
+                updateCell(i, 'status', 'Erro: ' + err.message, 'status-error');
+                updateCell(i, 'name', items[i]); 
             }
-
-            progressBar.style.width = `${((i+1)/total)*100}%`;
+            completed++;
+            progressBar.style.width = `${(completed/total)*100}%`;
         }
-        
         document.getElementById('btnExport').style.display = 'block';
-        saveState();
     }
 
-    // --- DOM & TABELA ---
-    function createRowPlaceholder(idx, name) {
+    function createRow(index, rawInput) {
         const tbody = document.querySelector('#dataTable tbody');
         const tr = document.createElement('tr');
-        tr.id = `row-${idx}`;
-        // Cria colunas vazias com IDs para fácil acesso
-        // 0:Img, 1:Name, 2:Status, 3:BR, 4:US, 5:Score, 6:Date, 7:Tags, 8:Engine, 9:Plats, 10:Players, 11:Trend, 12:HLTB
-        let html = `<td><div class="thumb"></div></td>`;
-        html += `<td id="cell-${idx}-name">${name}</td>`;
-        html += `<td id="cell-${idx}-status" style="font-size:11px">Fila</td>`;
-        for(let k=0; k<10; k++) html += `<td id="cell-${idx}-c${k}">---</td>`;
-        tr.innerHTML = html;
+        tr.id = `row-${index}`;
+        tr.innerHTML = `
+            <td><div class="thumb" style="background:#333"></div></td>
+            <td id="cell-${index}-name">${rawInput}</td>
+            <td id="cell-${index}-status" style="font-size:11px; color:#888;">Aguardando...</td>
+            <td id="cell-${index}-brl">---</td>
+            <td id="cell-${index}-usd">---</td>
+            <td id="cell-${index}-score">---</td>
+            <td id="cell-${index}-date">---</td>
+            <td id="cell-${index}-plats">
+                <span class="plat-icon pc active" title="PC"></span>
+                <span class="plat-icon ps" id="icon-${index}-ps" title="PlayStation"></span>
+                <span class="plat-icon xb" id="icon-${index}-xb" title="Xbox"></span>
+                <span class="plat-icon sw" id="icon-${index}-sw" title="Switch"></span>
+            </td>
+            <td id="cell-${index}-engine">---</td>
+            <td id="cell-${index}-players">---</td>
+            <td id="cell-${index}-trend">---</td>
+            <td id="cell-${index}-dev">---</td>
+            <td id="cell-${index}-id" style="font-family:monospace; color:#555">---</td>
+        `;
         tbody.appendChild(tr);
     }
 
-    function updateCell(rowIdx, colIdx, content, cssClass) {
-        // Mapeamento manual dos indices criados no createRowPlaceholder
-        // c0=BR, c1=US, c2=Score, c3=Date, c4=Tags, c5=Engine, c6=Plats, c7=Players, c8=Trend, c9=HLTB
-        let targetId;
-        if(colIdx === 1) targetId = `cell-${rowIdx}-name`;
-        else if(colIdx === 2) targetId = `cell-${rowIdx}-status`;
-        else targetId = `cell-${rowIdx}-c${colIdx-3}`;
-
-        const el = document.getElementById(targetId);
-        if(el) {
-            el.innerHTML = content;
-            if(cssClass) el.className = cssClass;
+    function updateCell(rowIdx, field, value, className = '') {
+        const cell = document.getElementById(`cell-${rowIdx}-${field}`);
+        if(cell) {
+            cell.innerHTML = value;
+            if(className) cell.className = className;
         }
     }
 
-    function fillRowBasic(idx, data) {
-        const row = document.getElementById(`row-${idx}`);
-        row.querySelector('.thumb').outerHTML = `<img src="${data.img}" class="thumb">`;
-        
-        const linkName = `<a href="https://store.steampowered.com/app/${data.id}" target="_blank" style="color:#fff;text-decoration:none;font-weight:bold">${data.name}</a><br><span style="font-size:10px;color:#666">ID: ${data.id}</span>`;
-        
-        updateCell(idx, 1, linkName);
-        updateCell(idx, 3, data.priceBr, 'price-br');
-        updateCell(idx, 4, data.priceUs, 'price-us');
-        updateCell(idx, 5, data.score, 'score');
-        
-        // Data Relativa
-        const relDate = getRelativeTime(data.releaseRaw);
-        updateCell(idx, 6, `${data.release}<span class="date-rel">${relDate}</span>`);
-
-        // Tags
-        let tagsHtml = data.genres.slice(0,3).map(g => `<span class="tag-pill">${g}</span>`).join('');
-        updateCell(idx, 7, tagsHtml || "-");
+    function clearTable() {
+        document.querySelector('#dataTable tbody').innerHTML = '';
+        processedData = [];
     }
-
-    // --- RECONSTRUÇÃO (RESTORE) ---
-    function rebuildTableFromMemory() {
-        const tbody = document.querySelector('#dataTable tbody');
-        tbody.innerHTML = '';
-        
-        processedData.forEach((data, idx) => {
-            const tr = document.createElement('tr');
-            if(data.error) {
-                tr.innerHTML = `<td>Err</td><td>${data.name}</td><td class="status-error">${data.msg}</td><td colspan="10"></td>`;
-            } else {
-                // Reconstrói HTML baseado nos dados salvos
-                let tags = (data.tags || []).map(t => `<span class="tag-pill">${t}</span>`).join('');
-                let plats = '';
-                if(data.pc) plats += `<span class="plat-icon pc active"></span>`;
-                if(data.ps) plats += `<span class="plat-icon ps active"></span>`;
-                if(data.xb) plats += `<span class="plat-icon xb active"></span>`;
-                if(data.sw) plats += `<span class="plat-icon sw active"></span>`;
-
-                tr.innerHTML = `
-                    <td><img src="${data.img}" class="thumb"></td>
-                    <td><a href="${data.link}" target="_blank" style="color:#fff;font-weight:bold">${data.name}</a></td>
-                    <td class="trend-up">Restaurado</td>
-                    <td class="price-br">${data.priceBr}</td>
-                    <td class="price-us">${data.priceUs}</td>
-                    <td class="score">${data.score}</td>
-                    <td>${data.date}</td>
-                    <td>${tags}</td>
-                    <td>${data.engineHtml || data.engine}</td>
-                    <td>${plats}</td>
-                    <td>${data.players}</td>
-                    <td class="${data.trend.includes('+')?'trend-up':'trend-down'}">${data.trend}</td>
-                    <td>${data.hltbHtml || '-'}</td>
-                `;
-            }
-            tbody.appendChild(tr);
-        });
-    }
-
-    // --- RESOLVERS & FETCHERS ---
 
     async function resolveID(input) {
         if (/^\d+$/.test(input)) return input;
         const linkMatch = input.match(/\/app\/(\d+)/);
         if (linkMatch) return linkMatch[1];
-        
-        // Search Steam
-        const url = `https://store.steampowered.com/search/?term=${input}&category1=998`;
-        const res = await robustFetch(url);
-        const html = await res.text();
+        const searchUrl = `${CORS_PROXY}https://store.steampowered.com/search/?term=${encodeURIComponent(input)}&category1=998`;
+        const html = await fetch(searchUrl).then(r => r.text());
         const doc = new DOMParser().parseFromString(html, "text/html");
         const first = doc.querySelector('#search_resultsRows a');
-        if(!first) throw new Error("Jogo não encontrado");
+        if(!first) throw new Error("Não encontrado");
         return first.getAttribute('data-ds-appid').split(',')[0];
     }
 
     async function fetchSteamBase(appId) {
-        const urlBr = `https://store.steampowered.com/api/appdetails?appids=${appId}&l=brazilian&cc=br`;
-        const urlUs = `https://store.steampowered.com/api/appdetails?appids=${appId}&cc=us`;
-        
-        const [resBr, resUs] = await Promise.all([
-            robustFetch(urlBr).then(r=>r.json()), 
-            robustFetch(urlUs).then(r=>r.json())
-        ]);
-
-        if (!resBr[appId].success) throw new Error("API Restrita/Falha");
+        const brUrl = `${CORS_PROXY}https://store.steampowered.com/api/appdetails?appids=${appId}&l=brazilian&cc=br`;
+        const usUrl = `${CORS_PROXY}https://store.steampowered.com/api/appdetails?appids=${appId}&cc=us`;
+        const [resBr, resUs] = await Promise.all([fetch(brUrl).then(r=>r.json()), fetch(usUrl).then(r=>r.json())]);
+        if (!resBr[appId].success) throw new Error("API Steam Falhou");
         const d = resBr[appId].data;
         const dUs = resUs[appId]?.data;
-
         return {
-            id: appId,
             name: d.name,
             img: d.capsule_image || d.header_image,
             priceBr: d.is_free ? "Grátis" : (d.price_overview?.final_formatted || 'N/A'),
             priceUs: d.is_free ? "Free" : (dUs?.price_overview?.final_formatted || 'N/A'),
             score: d.metacritic?.score || '',
-            release: d.release_date?.date || 'TBA',
-            releaseRaw: d.release_date?.date || '',
-            dev: d.developers?.[0] || '',
-            genres: d.genres ? d.genres.map(g => g.description) : []
+            date: d.release_date?.date || '',
+            dev: d.developers?.[0] || ''
         };
     }
 
-    async function verifyExternalData(idx, gameName, appId) {
-        let engineHtml = `<a href="https://steamdb.info/app/${appId}/info/" target="_blank" class="db-link">SteamDB ↗</a>`;
-        let enginePlain = "SteamDB";
-        let foundPlats = { ps: false, xb: false, sw: false };
+    function fillRowBasic(idx, data) {
+        const row = document.getElementById(`row-${idx}`);
+        const appId = processedData[idx].id; 
+        row.querySelector('.thumb').outerHTML = `<img src="${data.img}" class="thumb">`;
+        
+        // CORREÇÃO: Criação do link clicável no nome do jogo
+        updateCell(idx, 'name', `<a href="https://store.steampowered.com/app/${appId}" target="_blank" class="game-link">${data.name}</a>`);
+        
+        updateCell(idx, 'brl', data.priceBr, 'price-br');
+        updateCell(idx, 'usd', data.priceUs, 'price-us');
+        updateCell(idx, 'score', data.score, 'score');
+        updateCell(idx, 'date', data.date);
+        updateCell(idx, 'dev', data.dev);
+    }
 
+    async function verifyExternalData(idx, gameName, appId) {
+        const steamDbLink = `<a href="https://steamdb.info/app/${appId}/info/" target="_blank" class="db-link">SteamDB ↗</a>`;
+        
         try {
-            // Wikipedia Scraping
             const sApi = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(gameName + " video game")}&format=json&origin=*`;
             const sRes = await fetch(sApi).then(r=>r.json());
             
@@ -516,7 +373,8 @@
                 let allText = "";
 
                 if(infobox) {
-                    infobox.querySelectorAll('tr').forEach(r => {
+                    const rows = infobox.querySelectorAll('tr');
+                    rows.forEach(r => {
                         const h = r.querySelector('th')?.innerText.toLowerCase()||"";
                         const v = r.querySelector('td')?.innerText||"";
                         if(h.includes('engine')) rawEngine = v;
@@ -524,203 +382,99 @@
                     });
                 }
 
-                // Engine Filter
                 if (rawEngine) {
-                    const engLower = rawEngine.toLowerCase();
-                    if (ACCEPTED_ENGINES.some(acc => engLower.includes(acc))) {
-                        engineHtml = rawEngine.replace(/\[.*?\]/g, ''); // Remove refs [1]
-                        enginePlain = engineHtml;
+                    const engineLower = rawEngine.toLowerCase();
+                    const isAccepted = ACCEPTED_ENGINES.some(eng => engineLower.includes(eng));
+                    if (isAccepted) {
+                        updateCell(idx, 'engine', rawEngine);
+                    } else {
+                        updateCell(idx, 'engine', steamDbLink);
                     }
+                } else {
+                    updateCell(idx, 'engine', steamDbLink);
                 }
 
-                // Platforms Wiki
                 const t = allText.toLowerCase();
-                if(t.includes('playstation') || t.includes('ps4') || t.includes('ps5')) foundPlats.ps = true;
-                if(t.includes('xbox') || t.includes('series') || t.includes('one')) foundPlats.xb = true;
-                if(t.includes('switch') || t.includes('nintendo')) foundPlats.sw = true;
+                if(t.includes('playstation') || t.includes('ps4') || t.includes('ps5')) document.getElementById(`icon-${idx}-ps`).classList.add('active');
+                if(t.includes('xbox') || t.includes('series') || t.includes('one')) document.getElementById(`icon-${idx}-xb`).classList.add('active');
+                if(t.includes('switch') || t.includes('nintendo')) document.getElementById(`icon-${idx}-sw`).classList.add('active');
+
+            } else {
+                 updateCell(idx, 'engine', steamDbLink);
+            }
+        } catch(e) { 
+            console.warn(e);
+            updateCell(idx, 'engine', steamDbLink);
+        }
+
+        checkStoreBatch(idx, 'ps', `site:store.playstation.com "${gameName}"`);
+        checkStoreBatch(idx, 'xb', `site:xbox.com/pt-br/games/store "${gameName}"`);
+        checkStoreBatch(idx, 'sw', `site:nintendo.com/pt-br/store "${gameName}"`);
+    }
+
+    async function checkStoreBatch(idx, type, query) {
+        try {
+            const url = `${CORS_PROXY}https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
+            const html = await fetch(url).then(r=>r.text());
+            if(!html.includes("No results") && html.includes("result__a")) {
+                document.getElementById(`icon-${idx}-${type}`).classList.add('active');
             }
         } catch(e) {}
-
-        // Fallback Store Search (Sniper)
-        const check = async (type, q) => {
-            try {
-                const url = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(q)}`;
-                const res = await robustFetch(url);
-                const html = await res.text();
-                if(!html.includes("No results") && html.includes("result__a")) foundPlats[type] = true;
-            } catch(e){}
-        };
-
-        // Roda snipers apenas se não achou na wiki
-        let promises = [];
-        if(!foundPlats.ps) promises.push(check('ps', `site:store.playstation.com "${gameName}"`));
-        if(!foundPlats.xb) promises.push(check('xb', `site:xbox.com/pt-br/games/store "${gameName}"`));
-        if(!foundPlats.sw) promises.push(check('sw', `site:nintendo.com/pt-br/store "${gameName}"`));
-        await Promise.all(promises);
-
-        // Render UI
-        updateCell(idx, 8, engineHtml);
-        
-        let platHtml = `<span class="plat-icon pc active" title="PC"></span>`;
-        if(foundPlats.ps) platHtml += `<span class="plat-icon ps active" title="PlayStation"></span>`;
-        if(foundPlats.xb) platHtml += `<span class="plat-icon xb active" title="Xbox"></span>`;
-        if(foundPlats.sw) platHtml += `<span class="plat-icon sw active" title="Switch"></span>`;
-        updateCell(idx, 9, platHtml);
-
-        // Store temp data for capture
-        document.getElementById(`row-${idx}`).dataset.engine = enginePlain;
-        document.getElementById(`row-${idx}`).dataset.ps = foundPlats.ps;
-        document.getElementById(`row-${idx}`).dataset.xb = foundPlats.xb;
-        document.getElementById(`row-${idx}`).dataset.sw = foundPlats.sw;
     }
 
     async function fetchTrends(idx, appId) {
         try {
-            const url = `https://steamcharts.com/app/${appId}`;
-            const res = await robustFetch(url);
-            const text = await res.text();
+            const url = `${CORS_PROXY}https://steamcharts.com/app/${appId}`;
+            const text = await fetch(url).then(r => r.text());
             const doc = new DOMParser().parseFromString(text, "text/html");
-            
             const current = doc.querySelector('.app-stat .num')?.innerText || "-";
-            updateCell(idx, 10, current);
+            updateCell(idx, 'players', current);
 
             const rows = doc.querySelectorAll('table.common-table tbody tr');
-            let trendTxt = "-";
-            let css = "";
-            
             if(rows.length > 6) {
                 const now = parseFloat(rows[0].children[1].innerText);
                 const m6 = parseFloat(rows[6].children[1].innerText);
                 const diff = ((now - m6)/m6)*100;
-                trendTxt = (diff > 0 ? "+" : "") + diff.toFixed(1) + "%";
-                css = diff > 0 ? "trend-up" : "trend-down";
+                let symbol = diff > 0 ? "📈 +" : "📉 ";
+                let css = diff > 0 ? "trend-up" : "trend-down";
+                updateCell(idx, 'trend', `${symbol}${diff.toFixed(1)}%`, css);
             }
-            updateCell(idx, 11, trendTxt, css);
-        } catch(e) { updateCell(idx, 11, "?"); }
+        } catch(e) { updateCell(idx, 'trend', '?'); }
     }
 
-    async function fetchHLTB(idx, gameName) {
-        // HLTB tem proteção forte. Vamos gerar um link de busca "inteligente".
-        // Se quiséssemos arriscar scraping, falharia frequentemente em CORS.
-        const url = `https://howlongtobeat.com/?q=${encodeURIComponent(gameName)}`;
-        const link = `<a href="${url}" target="_blank" class="hltb-link">Ver HLTB ↗</a>`;
-        updateCell(idx, 12, link);
-    }
+    function saveToMemory(idx, steamData, appId) {
+        const engineCell = document.getElementById(`cell-${idx}-engine`);
+        let engineText = engineCell.innerText.includes("SteamDB") ? "Consultar SteamDB" : engineCell.innerText;
 
-    // --- UTILS ---
-    function getRelativeTime(dateString) {
-        if(!dateString) return "";
-        const date = new Date(dateString);
-        if(isNaN(date)) return "";
-        const now = new Date();
-        const diffTime = now - date;
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
-        const diffYears = (diffDays / 365).toFixed(1);
-
-        if (diffDays < 0) return " (Em breve)";
-        if (diffDays < 30) return " (Recente)";
-        if (diffYears >= 1) return ` (Há ${diffYears} anos)`;
-        return ` (Há ${Math.floor(diffDays/30)} meses)`;
-    }
-
-    function captureRowData(idx, steamData, appId) {
-        const row = document.getElementById(`row-${idx}`);
-        
-        // Extrai dados do DOM para garantir sincronia
         processedData[idx] = {
             id: appId,
             name: steamData.name,
-            link: `https://store.steampowered.com/app/${appId}`,
-            img: steamData.img,
             priceBr: steamData.priceBr,
             priceUs: steamData.priceUs,
             score: steamData.score,
-            date: steamData.release,
+            date: steamData.date,
             dev: steamData.dev,
-            tags: steamData.genres,
-            engine: row.dataset.engine,
-            engineHtml: document.getElementById(`cell-${idx}-c5`).innerHTML,
-            ps: row.dataset.ps === 'true',
-            xb: row.dataset.xb === 'true',
-            sw: row.dataset.sw === 'true',
-            players: document.getElementById(`cell-${idx}-c7`).innerText,
-            trend: document.getElementById(`cell-${idx}-c8`).innerText,
-            hltbHtml: document.getElementById(`cell-${idx}-c9`).innerHTML
+            engine: engineText,
+            players: document.getElementById(`cell-${idx}-players`).innerText,
+            trend: document.getElementById(`cell-${idx}-trend`).innerText,
+            ps: document.getElementById(`icon-${idx}-ps`).classList.contains('active') ? "Sim" : "Não",
+            xb: document.getElementById(`icon-${idx}-xb`).classList.contains('active') ? "Sim" : "Não",
+            sw: document.getElementById(`icon-${idx}-sw`).classList.contains('active') ? "Sim" : "Não",
+            link: `https://store.steampowered.com/app/${appId}`
         };
-    }
-
-    // --- UI HELPERS ---
-    function filterTable() {
-        const term = document.getElementById('tableFilter').value.toLowerCase();
-        const rows = document.querySelectorAll('#dataTable tbody tr');
-        rows.forEach(row => {
-            const text = row.innerText.toLowerCase();
-            row.style.display = text.includes(term) ? '' : 'none';
-        });
-    }
-
-    function sortTable(n) {
-        const table = document.getElementById("dataTable");
-        let rows, switching, i, x, y, shouldSwitch, dir, switchcount = 0;
-        switching = true;
-        dir = "asc";
-        
-        while (switching) {
-            switching = false;
-            rows = table.rows;
-            for (i = 1; i < (rows.length - 1); i++) {
-                shouldSwitch = false;
-                x = rows[i].getElementsByTagName("TD")[n];
-                y = rows[i + 1].getElementsByTagName("TD")[n];
-                
-                // Extração inteligente de valores (remove R$, %, etc)
-                let valX = x.innerText.toLowerCase().replace(/[^0-9a-z.-]/g, '');
-                let valY = y.innerText.toLowerCase().replace(/[^0-9a-z.-]/g, '');
-                
-                // Se for número
-                if(!isNaN(parseFloat(valX)) && !isNaN(parseFloat(valY))) {
-                    valX = parseFloat(valX);
-                    valY = parseFloat(valY);
-                }
-
-                if (dir == "asc") {
-                    if (valX > valY) { shouldSwitch = true; break; }
-                } else if (dir == "desc") {
-                    if (valX < valY) { shouldSwitch = true; break; }
-                }
-            }
-            if (shouldSwitch) {
-                rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
-                switching = true;
-                switchcount++;
-            } else {
-                if (switchcount == 0 && dir == "asc") {
-                    dir = "desc";
-                    switching = true;
-                }
-            }
-        }
-    }
-
-    function clearTable() {
-        document.querySelector('#dataTable tbody').innerHTML = '';
-        processedData = [];
-        localStorage.removeItem('steam_data');
-        document.getElementById('btnExport').style.display = 'none';
     }
 
     function exportToCSV() {
         if(processedData.length === 0) return alert("Nada para exportar");
-        let csvContent = "\uFEFFID,Nome,Preco_BRL,Preco_USD,Score,Lancamento,Dev,Engine,Tags,Players,Trend,PC,PSN,Xbox,Switch,Link\n";
+        let csvContent = "\uFEFF"; 
+        csvContent += "ID,Nome,Preco_BRL,Preco_USD,Score,Lancamento,Dev,Engine,Jogadores_Ativos,Tendencia_6m,PC,PSN,Xbox,Switch,Link_Steam\n";
 
         processedData.forEach(row => {
-            if(row.error) return;
-            const escape = (t) => `"${String(t || '').replace(/"/g, '""')}"`;
-            
+            if(!row || !row.name) return;
+            const escape = (txt) => `"${String(txt).replace(/"/g, '""')}"`;
             let line = [
-                row.id, escape(row.name), escape(row.priceBr), escape(row.priceUs), row.score, escape(row.date),
-                escape(row.dev), escape(row.engine), escape(row.tags.join(', ')), escape(row.players), escape(row.trend),
-                "Sim", row.ps?"Sim":"Não", row.xb?"Sim":"Não", row.sw?"Sim":"Não", row.link
+                row.id, escape(row.name), escape(row.priceBr), escape(row.priceUs), row.score, escape(row.date), escape(row.dev),
+                escape(row.engine), escape(row.players), escape(row.trend), "Sim", row.ps, row.xb, row.sw, row.link
             ].join(",");
             csvContent += line + "\n";
         });
@@ -729,7 +483,7 @@
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
         link.setAttribute("href", url);
-        link.setAttribute("download", "steam_pro_analysis.csv");
+        link.setAttribute("download", "analise_engines_steam.csv");
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
