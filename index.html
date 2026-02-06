@@ -163,9 +163,6 @@
             text-decoration: none;
             font-weight: bold;
         }
-        .game-link:hover {
-            text-decoration: underline;
-        }
     </style>
 </head>
 <body>
@@ -174,7 +171,7 @@
 
     <div class="controls">
         <div>
-            <textarea id="inputList" placeholder="Cole aqui sua lista de jogos.&#10;Aceita links Steam, IDs ou Nomes.&#10;Separados por Enter, vírgula ou ponto e vírgula."></textarea>
+            <textarea id="inputList" placeholder="Cole aqui sua lista de jogos (Links, IDs ou Nomes)."></textarea>
         </div>
         <div class="actions">
             <button id="btnProcess" onclick="startBatch()">PROCESSAR LISTA</button>
@@ -198,7 +195,7 @@
                     <th>Preço (USD)</th>
                     <th>Score</th>
                     <th>Lançamento</th>
-                    <th>Plataformas (Wiki/Lojas)</th>
+                    <th>Plataformas</th>
                     <th>Engine</th>
                     <th>Jogadores (Agora)</th>
                     <th>Tendência (6m)</th>
@@ -211,7 +208,8 @@
     </div>
 
 <script>
-    const CORS_PROXY = "https://corsproxy.io/?";
+    // Proxy alternativo para evitar bloqueios do corsproxy.io
+    const CORS_PROXY = "https://api.allorigins.win/raw?url=";
     let processedData = []; 
     const ACCEPTED_ENGINES = ['unity', 'unreal', 'gamemaker', 'game maker', 'godot'];
 
@@ -254,13 +252,14 @@
                 saveToMemory(i, steamData, appId);
 
             } catch (err) {
-                console.error("Erro no processamento:", err);
+                console.error("Erro:", err);
                 updateCell(i, 'status', 'Erro: ' + err.message, 'status-error');
-                // Garante que o objeto exista para não quebrar o exportador
                 if(!processedData[i]) processedData[i] = { id: '?', name: items[i] };
             }
             completed++;
             progressBar.style.width = `${(completed/total)*100}%`;
+            // Pequeno delay para evitar rate limit
+            await new Promise(r => setTimeout(r, 300));
         }
         document.getElementById('btnExport').style.display = 'block';
     }
@@ -309,7 +308,8 @@
         if (/^\d+$/.test(input)) return input;
         const linkMatch = input.match(/\/app\/(\d+)/);
         if (linkMatch) return linkMatch[1];
-        const searchUrl = `${CORS_PROXY}https://store.steampowered.com/search/?term=${encodeURIComponent(input)}&category1=998`;
+        
+        const searchUrl = `${CORS_PROXY}${encodeURIComponent('https://store.steampowered.com/search/?term=' + input)}`;
         const res = await fetch(searchUrl);
         const html = await res.text();
         const doc = new DOMParser().parseFromString(html, "text/html");
@@ -319,21 +319,22 @@
     }
 
     async function fetchSteamBase(appId) {
-        const brUrl = `${CORS_PROXY}https://store.steampowered.com/api/appdetails?appids=${appId}&l=brazilian&cc=br`;
-        const usUrl = `${CORS_PROXY}https://store.steampowered.com/api/appdetails?appids=${appId}&cc=us`;
+        const brUrl = `${CORS_PROXY}${encodeURIComponent(`https://store.steampowered.com/api/appdetails?appids=${appId}&l=brazilian&cc=br`)}`;
+        const usUrl = `${CORS_PROXY}${encodeURIComponent(`https://store.steampowered.com/api/appdetails?appids=${appId}&cc=us`)}`;
         
         const [resBr, resUs] = await Promise.all([
             fetch(brUrl).then(r => r.json()), 
             fetch(usUrl).then(r => r.json())
         ]);
 
-        // CORREÇÃO: Verificação de segurança para evitar erro 'success' of undefined
-        if (!resBr || !resBr[appId] || resBr[appId].success === false) {
-            throw new Error("Dados indisponíveis na Steam");
+        // Verificação robusta: a API pode retornar appId como número ou string no objeto
+        const dataKey = Object.keys(resBr)[0]; 
+        if (!resBr[dataKey] || !resBr[dataKey].success) {
+            throw new Error("ID não reconhecido pela Steam");
         }
 
-        const d = resBr[appId].data;
-        const dUs = resUs[appId] && resUs[appId].success ? resUs[appId].data : null;
+        const d = resBr[dataKey].data;
+        const dUs = resUs[dataKey]?.success ? resUs[dataKey].data : null;
 
         return {
             name: d.name || "Sem Nome",
@@ -381,7 +382,7 @@
                         const h = r.querySelector('th')?.innerText.toLowerCase()||"";
                         const v = r.querySelector('td')?.innerText||"";
                         if(h.includes('engine')) rawEngine = v;
-                        if(h.includes('platform') || h.includes('system')) allText += v + " ";
+                        if(h.includes('platform')) allText += v + " ";
                     });
                 }
 
@@ -395,36 +396,19 @@
 
                 const t = allText.toLowerCase();
                 if(t.includes('playstation') || t.includes('ps4') || t.includes('ps5')) document.getElementById(`icon-${idx}-ps`).classList.add('active');
-                if(t.includes('xbox') || t.includes('series') || t.includes('one')) document.getElementById(`icon-${idx}-xb`).classList.add('active');
+                if(t.includes('xbox')) document.getElementById(`icon-${idx}-xb`).classList.add('active');
                 if(t.includes('switch') || t.includes('nintendo')) document.getElementById(`icon-${idx}-sw`).classList.add('active');
-
             } else {
                  updateCell(idx, 'engine', steamDbLink);
             }
         } catch(e) { 
             updateCell(idx, 'engine', steamDbLink);
         }
-
-        checkStoreBatch(idx, 'ps', `site:store.playstation.com "${gameName}"`);
-        checkStoreBatch(idx, 'xb', `site:xbox.com/pt-br/games/store "${gameName}"`);
-        checkStoreBatch(idx, 'sw', `site:nintendo.com/pt-br/store "${gameName}"`);
-    }
-
-    async function checkStoreBatch(idx, type, query) {
-        try {
-            const url = `${CORS_PROXY}https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
-            const res = await fetch(url);
-            const html = await res.text();
-            if(!html.includes("No results") && html.includes("result__a")) {
-                const icon = document.getElementById(`icon-${idx}-${type}`);
-                if(icon) icon.classList.add('active');
-            }
-        } catch(e) {}
     }
 
     async function fetchTrends(idx, appId) {
         try {
-            const url = `${CORS_PROXY}https://steamcharts.com/app/${appId}`;
+            const url = `${CORS_PROXY}${encodeURIComponent('https://steamcharts.com/app/' + appId)}`;
             const res = await fetch(url);
             const text = await res.text();
             const doc = new DOMParser().parseFromString(text, "text/html");
@@ -437,16 +421,13 @@
                 const m6 = parseFloat(rows[6].children[1].innerText.replace(/,/g, ''));
                 const diff = ((now - m6)/m6)*100;
                 let symbol = diff > 0 ? "📈 +" : "📉 ";
-                let css = diff > 0 ? "trend-up" : "trend-down";
-                updateCell(idx, 'trend', `${symbol}${diff.toFixed(1)}%`, css);
+                updateCell(idx, 'trend', `${symbol}${diff.toFixed(1)}%`, diff > 0 ? "trend-up" : "trend-down");
             }
         } catch(e) { updateCell(idx, 'trend', '?'); }
     }
 
     function saveToMemory(idx, steamData, appId) {
         const engineCell = document.getElementById(`cell-${idx}-engine`);
-        let engineText = engineCell.innerText.includes("SteamDB") ? "Consultar SteamDB" : engineCell.innerText;
-
         processedData[idx] = {
             id: appId,
             name: steamData.name,
@@ -455,7 +436,7 @@
             score: steamData.score,
             date: steamData.date,
             dev: steamData.dev,
-            engine: engineText,
+            engine: engineCell.innerText.includes("SteamDB") ? "SteamDB" : engineCell.innerText,
             players: document.getElementById(`cell-${idx}-players`).innerText,
             trend: document.getElementById(`cell-${idx}-trend`).innerText,
             ps: document.getElementById(`icon-${idx}-ps`).classList.contains('active') ? "Sim" : "Não",
@@ -469,27 +450,19 @@
         if(processedData.length === 0) return alert("Nada para exportar");
         let csvContent = "\uFEFF"; 
         csvContent += "ID,Nome,Preco_BRL,Preco_USD,Score,Lancamento,Dev,Engine,Jogadores_Ativos,Tendencia_6m,PC,PSN,Xbox,Switch,Link_Steam\n";
-
         processedData.forEach(row => {
             if(!row || !row.id) return;
             const escape = (txt) => `"${String(txt || '').replace(/"/g, '""')}"`;
-            let line = [
-                row.id, escape(row.name), escape(row.priceBr), escape(row.priceUs), row.score, escape(row.date), escape(row.dev),
-                escape(row.engine), escape(row.players), escape(row.trend), "Sim", row.ps, row.xb, row.sw, row.link
-            ].join(",");
+            let line = [row.id, escape(row.name), escape(row.priceBr), escape(row.priceUs), row.score, escape(row.date), escape(row.dev), escape(row.engine), escape(row.players), escape(row.trend), "Sim", row.ps, row.xb, row.sw, row.link].join(",");
             csvContent += line + "\n";
         });
-
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
-        link.setAttribute("href", url);
-        link.setAttribute("download", "analise_engines_steam.csv");
-        document.body.appendChild(link);
+        link.href = url;
+        link.download = "analise_steam.csv";
         link.click();
-        document.body.removeChild(link);
     }
 </script>
-
 </body>
 </html>
