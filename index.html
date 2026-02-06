@@ -78,6 +78,16 @@
         #btnExport { background: #4c6b22; display: none; }
         #btnClear { background: #3a3a3a; }
 
+        .btn-retry {
+            background: #e67e22;
+            font-size: 9px;
+            padding: 2px 5px;
+            margin-left: 5px;
+            border-radius: 3px;
+            display: inline-block;
+            cursor: pointer;
+        }
+
         .progress-container {
             width: 100%;
             height: 4px;
@@ -208,9 +218,9 @@
     </div>
 
 <script>
-    // Proxy alternativo para evitar bloqueios do corsproxy.io
     const CORS_PROXY = "https://api.allorigins.win/raw?url=";
     let processedData = []; 
+    let currentItems = [];
     const ACCEPTED_ENGINES = ['unity', 'unreal', 'gamemaker', 'game maker', 'godot'];
 
     async function startBatch() {
@@ -224,44 +234,47 @@
         progressBox.style.display = 'block';
         progressBar.style.width = '0%';
 
-        let items = input.split(/[\n,;]+/).map(s => s.trim()).filter(s => s.length > 0);
-        let total = items.length;
-        let completed = 0;
+        currentItems = input.split(/[\n,;]+/).map(s => s.trim()).filter(s => s.length > 0);
+        let total = currentItems.length;
 
-        items.forEach((item, index) => createRow(index, item));
+        currentItems.forEach((item, index) => createRow(index, item));
 
         for (let i = 0; i < total; i++) {
-            try {
-                updateCell(i, 'status', 'Buscando ID...', 'status-loading');
-                let appId = await resolveID(items[i]);
-                
-                processedData[i] = { id: appId }; 
-                
-                updateCell(i, 'id', appId);
-                updateCell(i, 'status', 'Baixando Dados...', 'status-loading');
-
-                let steamData = await fetchSteamBase(appId);
-                fillRowBasic(i, steamData);
-                
-                await Promise.all([
-                    verifyExternalData(i, steamData.name, appId),
-                    fetchTrends(i, appId)
-                ]);
-
-                updateCell(i, 'status', 'Concluído', 'trend-up');
-                saveToMemory(i, steamData, appId);
-
-            } catch (err) {
-                console.error("Erro:", err);
-                updateCell(i, 'status', 'Erro: ' + err.message, 'status-error');
-                if(!processedData[i]) processedData[i] = { id: '?', name: items[i] };
-            }
-            completed++;
-            progressBar.style.width = `${(completed/total)*100}%`;
-            // Pequeno delay para evitar rate limit
-            await new Promise(r => setTimeout(r, 300));
+            await processItem(i);
+            progressBar.style.width = `${((i+1)/total)*100}%`;
         }
         document.getElementById('btnExport').style.display = 'block';
+    }
+
+    async function processItem(i) {
+        try {
+            updateCell(i, 'status', 'Buscando ID...', 'status-loading');
+            let appId = await resolveID(currentItems[i]);
+            
+            processedData[i] = { id: appId }; 
+            
+            updateCell(i, 'id', appId);
+            updateCell(i, 'status', 'Baixando Dados...', 'status-loading');
+
+            let steamData = await fetchSteamBase(appId);
+            fillRowBasic(i, steamData);
+            
+            await Promise.all([
+                verifyExternalData(i, steamData.name, appId),
+                fetchTrends(i, appId)
+            ]);
+
+            updateCell(i, 'status', 'Concluído', 'trend-up');
+            saveToMemory(i, steamData, appId);
+
+        } catch (err) {
+            console.error("Erro:", err);
+            let retryBtn = `<button class="btn-retry" onclick="processItem(${i})">Reintentar</button>`;
+            updateCell(i, 'status', 'Erro: ' + err.message + retryBtn, 'status-error');
+            if(!processedData[i]) processedData[i] = { id: '?', name: currentItems[i] };
+        }
+        // Pequeno delay para evitar rate limit
+        await new Promise(r => setTimeout(r, 200));
     }
 
     function createRow(index, rawInput) {
@@ -327,10 +340,9 @@
             fetch(usUrl).then(r => r.json())
         ]);
 
-        // Verificação robusta: a API pode retornar appId como número ou string no objeto
         const dataKey = Object.keys(resBr)[0]; 
         if (!resBr[dataKey] || !resBr[dataKey].success) {
-            throw new Error("ID não reconhecido pela Steam");
+            throw new Error("Steam bloqueou acesso");
         }
 
         const d = resBr[dataKey].data;
@@ -362,20 +374,16 @@
 
     async function verifyExternalData(idx, gameName, appId) {
         const steamDbLink = `<a href="https://steamdb.info/app/${appId}/info/" target="_blank" class="db-link">SteamDB ↗</a>`;
-        
         try {
             const sApi = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(gameName + " video game")}&format=json&origin=*`;
             const sRes = await fetch(sApi).then(r=>r.json());
-            
             if (sRes.query && sRes.query.search.length > 0) {
                 const pApi = `https://en.wikipedia.org/w/api.php?action=parse&page=${encodeURIComponent(sRes.query.search[0].title)}&prop=text&format=json&origin=*`;
                 const pRes = await fetch(pApi).then(r=>r.json());
                 const doc = new DOMParser().parseFromString(pRes.parse.text['*'], "text/html");
-                
                 const infobox = doc.querySelector('.infobox');
                 let rawEngine = null;
                 let allText = "";
-
                 if(infobox) {
                     const rows = infobox.querySelectorAll('tr');
                     rows.forEach(r => {
@@ -385,25 +393,17 @@
                         if(h.includes('platform')) allText += v + " ";
                     });
                 }
-
                 if (rawEngine) {
                     const engineLower = rawEngine.toLowerCase();
                     const isAccepted = ACCEPTED_ENGINES.some(eng => engineLower.includes(eng));
                     updateCell(idx, 'engine', isAccepted ? rawEngine : steamDbLink);
-                } else {
-                    updateCell(idx, 'engine', steamDbLink);
-                }
-
+                } else { updateCell(idx, 'engine', steamDbLink); }
                 const t = allText.toLowerCase();
                 if(t.includes('playstation') || t.includes('ps4') || t.includes('ps5')) document.getElementById(`icon-${idx}-ps`).classList.add('active');
                 if(t.includes('xbox')) document.getElementById(`icon-${idx}-xb`).classList.add('active');
                 if(t.includes('switch') || t.includes('nintendo')) document.getElementById(`icon-${idx}-sw`).classList.add('active');
-            } else {
-                 updateCell(idx, 'engine', steamDbLink);
-            }
-        } catch(e) { 
-            updateCell(idx, 'engine', steamDbLink);
-        }
+            } else { updateCell(idx, 'engine', steamDbLink); }
+        } catch(e) { updateCell(idx, 'engine', steamDbLink); }
     }
 
     async function fetchTrends(idx, appId) {
@@ -414,7 +414,6 @@
             const doc = new DOMParser().parseFromString(text, "text/html");
             const current = doc.querySelector('.app-stat .num')?.innerText || "-";
             updateCell(idx, 'players', current);
-
             const rows = doc.querySelectorAll('table.common-table tbody tr');
             if(rows.length > 6) {
                 const now = parseFloat(rows[0].children[1].innerText.replace(/,/g, ''));
