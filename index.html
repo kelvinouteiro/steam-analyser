@@ -177,11 +177,11 @@
 </head>
 <body>
 
-    <h1>Analisador Batch (Filtro Engine)</h1>
+    <h1>Analisador em Batch da steam</h1>
 
     <div class="controls">
         <div>
-            <textarea id="inputList" placeholder="Cole aqui sua lista de jogos (Links, IDs ou Nomes)."></textarea>
+            <textarea id="inputList" placeholder="Cole aqui sua lista de jogos (Links, IDs ou Nomes) com espaço de 1 linha."></textarea>
         </div>
         <div class="actions">
             <button id="btnProcess" onclick="startBatch()">PROCESSAR LISTA</button>
@@ -269,7 +269,7 @@
 
         } catch (err) {
             console.error("Erro:", err);
-            let retryBtn = `<button class="btn-retry" onclick="processItem(${i})">Reintentar</button>`;
+            let retryBtn = `<button class="btn-retry" onclick="processItem(${i})">Reload</button>`;
             updateCell(i, 'status', 'Erro: ' + err.message + retryBtn, 'status-error');
             if(!processedData[i]) processedData[i] = { id: '?', name: currentItems[i] };
         }
